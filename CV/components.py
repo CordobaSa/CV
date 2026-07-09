@@ -67,6 +67,27 @@ def top_nav() -> rx.Component:
         border_bottom=f"1px solid {styles.colors['accent_silver']}33"
     )
 
+
+def _tech_badge(tech: rx.Var[str]) -> rx.Component:
+    """Badge individual para una tecnología del tech_stack."""
+    return rx.badge(
+        tech,
+        variant="outline",
+        color_scheme="blue",
+        font_family="Space Mono, monospace",
+        font_size="0.7em",
+    )
+
+
+def _metric_item(key: rx.Var[str], value: rx.Var[str]) -> rx.Component:
+    """Un par clave-valor para una métrica."""
+    return rx.hstack(
+        rx.text(key, color=styles.colors["accent_silver"], font_family="Space Mono, monospace", font_size="0.75em", font_weight="bold"),
+        rx.text(value, color=styles.colors["text_primary"], font_family="Inter", font_size="0.85em"),
+        spacing="2",
+    )
+
+
 def project_feed_item(project: dict) -> rx.Component:
     """Una fila del timeline para un proyecto (Alternating Timeline Cascade)."""
     return rx.box(
@@ -75,9 +96,24 @@ def project_feed_item(project: dict) -> rx.Component:
             rx.box(
                 rx.text(project["title"], font_family="Space Mono, monospace", font_weight="bold", font_size="1.2em", color=styles.colors["text_primary"]),
                 
+                # Tech Stack Badges
+                rx.cond(
+                    project["tech_stack"].length() > 0,
+                    rx.hstack(
+                        rx.foreach(
+                            project["tech_stack"],
+                            _tech_badge,
+                        ),
+                        flex_wrap="wrap",
+                        gap="0.4em",
+                        margin_top="0.8em",
+                    ),
+                    rx.fragment(),
+                ),
+
                 # Contenedor para inyectar el código de Mermaid
                 rx.box(
-                    rx.html(f"<div class='mermaid'>\n{project['mermaid_diagram']}\n</div>"),
+                    rx.html("<div class='mermaid'>\n" + project["mermaid_diagram"] + "\n</div>"),
                     margin_top="1.5em",
                     margin_bottom="1em",
                     padding="1em",
@@ -86,7 +122,17 @@ def project_feed_item(project: dict) -> rx.Component:
                     overflow_x="auto"
                 ),
                 
-                rx.link("Código Fuente", href=project["github_url"], color=styles.colors["text_muted"], text_decoration="underline", font_size="0.9em", margin_top="0.5em"),
+                # Links: Código Fuente y Demo
+                rx.hstack(
+                    rx.link("Código Fuente", href=project["github_url"], color=styles.colors["text_muted"], text_decoration="underline", font_size="0.9em"),
+                    rx.cond(
+                        project["demo_url"],
+                        rx.link("Live Demo", href=project["demo_url"], color=styles.colors["accent_neon"], text_decoration="underline", font_size="0.9em", font_weight="bold"),
+                        rx.fragment(),
+                    ),
+                    spacing="4",
+                    margin_top="0.5em",
+                ),
                 
                 width="45%",
                 padding="1.5em",
@@ -94,7 +140,12 @@ def project_feed_item(project: dict) -> rx.Component:
                 border=f"1px solid {styles.colors['accent_silver']}33",
                 border_radius="8px",
                 class_name="text-align-dynamic",
-                z_index="1"
+                z_index="1",
+                transition="box-shadow 0.3s ease, border-color 0.3s ease",
+                _hover={
+                    "box_shadow": f"0 0 20px {styles.colors['accent_neon']}33",
+                    "border_color": f"{styles.colors['accent_neon']}66",
+                },
             ),
             
             # Nodo Central (El conector brillante)
@@ -108,10 +159,29 @@ def project_feed_item(project: dict) -> rx.Component:
                 z_index="2"
             ),
             
-            # Lado B: Executive Summary
+            # Lado B: Executive Summary + Metrics
             rx.box(
                 rx.text("EXECUTIVE SUMMARY", font_family="Space Mono, monospace", font_size="0.8em", color=styles.colors["accent_silver"]),
                 rx.text(project["executive_summary"], color=styles.colors["text_muted"], margin_top="0.5em", font_size="0.95em", line_height="1.5"),
+                
+                # Metrics Section
+                rx.cond(
+                    project["metrics_list"].length() > 0,
+                    rx.box(
+                        rx.text("KEY METRICS", font_family="Space Mono, monospace", font_size="0.75em", color=styles.colors["accent_silver"], margin_bottom="0.5em"),
+                        rx.foreach(
+                            project["metrics_list"],
+                            lambda item: _metric_item(item[0], item[1]),
+                        ),
+                        margin_top="1.2em",
+                        padding="1em",
+                        background_color=styles.colors["bg_surface"],
+                        border_radius="6px",
+                        border=f"1px solid {styles.colors['accent_silver']}22",
+                    ),
+                    rx.fragment(),
+                ),
+
                 width="45%",
                 padding="1.5em",
                 class_name="text-align-dynamic",

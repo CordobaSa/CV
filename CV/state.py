@@ -31,7 +31,31 @@ class AppState(rx.State):
                 # Realizamos el fetch de la tabla 'projects'
                 response = supabase.table("projects").select("*").order("id", desc=True).execute()
                 print(f"[DEBUG] Proyectos cargados desde Supabase: {response.data}")
-                self.projects = response.data
+                
+                # Pre-procesamos los datos para que metrics sea una lista de pares [key, value]
+                # en lugar de un dict, lo cual es más fácil de iterar con rx.foreach
+                processed = []
+                for p in response.data:
+                    project = dict(p)
+                    # Convertir metrics dict a lista de pares para rx.foreach
+                    raw_metrics = project.get("metrics", {})
+                    if isinstance(raw_metrics, dict):
+                        project["metrics_list"] = [[k, v] for k, v in raw_metrics.items()]
+                    else:
+                        project["metrics_list"] = []
+                    
+                    # Asegurar que tech_stack siempre sea una lista
+                    if not isinstance(project.get("tech_stack"), list):
+                        project["tech_stack"] = []
+                    
+                    # Asegurar valores por defecto para campos opcionales
+                    project.setdefault("demo_url", "")
+                    project.setdefault("mermaid_diagram", "")
+                    project.setdefault("github_url", "#")
+                    
+                    processed.append(project)
+                
+                self.projects = processed
                 
                 # Desencadenamos los efectos JS después de cargar los datos
                 return rx.call_script('''
